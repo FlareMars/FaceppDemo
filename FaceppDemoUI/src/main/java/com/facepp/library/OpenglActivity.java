@@ -279,7 +279,6 @@ public class OpenglActivity extends Activity
 					long actionMaticsTime = System.currentTimeMillis();
 					ArrayList<ArrayList> pointsOpengl = new ArrayList<ArrayList>();
 					mPointsMatrix.vertexBuffers.clear();
-					mTextureMatrix.clearSquareCoords();
 					confidence = 0.0f;
 
 					if (faces.length >= 0) {
@@ -328,123 +327,17 @@ public class OpenglActivity extends Activity
 							roll = (float)(real_roll - Math.PI);
 							boolean rollToLeft = roll > 0;
 							float rad = (float) (Math.PI - Math.abs(roll));
-							List<PointF> transformedRect = new ArrayList<>(4);
-
-							PointF aPoint;
-							PointF bPoint;
-							PointF cPoint;
-							PointF dPoint;
-
-							// calculate transformed rect for simple icon
-							float[] leftEyeTopP = new float[]{faces[c].points[LandmarkConstants.MG_LEFT_EYE_TOP].x, faces[c].points[LandmarkConstants.MG_LEFT_EYE_TOP].y};
-							float[] rightEyeTopP = new float[]{faces[c].points[LandmarkConstants.MG_RIGHT_EYE_TOP].x, faces[c].points[LandmarkConstants.MG_RIGHT_EYE_TOP].y};
-
-							float w = distance(leftEyeTopP[0], leftEyeTopP[1], rightEyeTopP[0], rightEyeTopP[1]);
-							float h = w;
-
-//							PointF aPoint = new PointF(leftEyeTopP[0], leftEyeTopP[1]);
-//							PointF bPoint = new PointF(rightEyeTopP[0], rightEyeTopP[1]);
-//							PointF dPoint = new PointF(0.0f, (float) (aPoint.y - h * Math.cos(rad)));
-//							if (!rollToLeft) {
-//								dPoint.x = (float) (aPoint.x - h * Math.sin(rad));
-//							} else {
-//								dPoint.x = (float) (aPoint.x + h * Math.sin(rad));
-//							}
-//							PointF cPoint = new PointF(bPoint.x - aPoint.x + dPoint.x, bPoint.y - aPoint.y + dPoint.y);
-
-
-
+							
 							// calculate transformed rect for big eye
-							float[] leftEyeLeftCorner = new float[] {faces[c].points[LandmarkConstants.MG_LEFT_EYE_LEFT_CORNER].x, faces[c].points[LandmarkConstants.MG_LEFT_EYE_LEFT_CORNER].y};
-							float[] leftEyeRightCorner = new float[] {faces[c].points[LandmarkConstants.MG_LEFT_EYE_RIGHT_CORNER].x, faces[c].points[LandmarkConstants.MG_LEFT_EYE_RIGHT_CORNER].y};
+							List<FloatBuffer> vertextBuffers = new ArrayList<>(2);
+							vertextBuffers.add(calculateEyeRect(faces[c].points, rad, rollToLeft, height, width, orientation, true));
+							vertextBuffers.add(calculateEyeRect(faces[c].points, rad, rollToLeft, height, width, orientation, false));
+							mTextureMatrix.setSquaerCoords(vertextBuffers);
 
-							float eyeWidth = distance(leftEyeLeftCorner[0], leftEyeLeftCorner[1], leftEyeRightCorner[0], leftEyeRightCorner[1]);
-							float halfEyeHeight = eyeWidth / 2;
-
-							if (rollToLeft) {
-								aPoint = new PointF((float) (leftEyeLeftCorner[0] + halfEyeHeight * Math.sin(rad)), (float) (leftEyeLeftCorner[1] + halfEyeHeight * Math.cos(rad)));
-								dPoint = new PointF((float) (leftEyeLeftCorner[0] - halfEyeHeight * Math.sin(rad)), (float) (leftEyeLeftCorner[1] - halfEyeHeight * Math.cos(rad)));
-								cPoint = new PointF((float) (leftEyeRightCorner[0] - halfEyeHeight * Math.sin(rad)), (float) (leftEyeRightCorner[1] - halfEyeHeight * Math.cos(rad)));
-								bPoint = new PointF((float) (leftEyeRightCorner[0] + halfEyeHeight * Math.sin(rad)), (float) (leftEyeRightCorner[1] + halfEyeHeight * Math.cos(rad)));
-							} else {
-								aPoint = new PointF((float) (leftEyeLeftCorner[0] - halfEyeHeight * Math.sin(rad)), (float) (leftEyeLeftCorner[1] + halfEyeHeight * Math.cos(rad)));
-								dPoint = new PointF((float) (leftEyeLeftCorner[0] + halfEyeHeight * Math.sin(rad)), (float) (leftEyeLeftCorner[1] - halfEyeHeight * Math.cos(rad)));
-								cPoint = new PointF((float) (leftEyeRightCorner[0] + halfEyeHeight * Math.sin(rad)), (float) (leftEyeRightCorner[1] - halfEyeHeight * Math.cos(rad)));
-								bPoint = new PointF((float) (leftEyeRightCorner[0] - halfEyeHeight * Math.sin(rad)), (float) (leftEyeRightCorner[1] + halfEyeHeight * Math.cos(rad)));
-							}
-
-							transformedRect.add(aPoint);
-							transformedRect.add(bPoint);
-							transformedRect.add(cPoint);
-							transformedRect.add(dPoint);
-
-							ByteBuffer bb = ByteBuffer.allocateDirect(transformedRect.size() * 3 * 4);
-							bb.order(ByteOrder.nativeOrder());
-							FloatBuffer vertexBuffer = bb.asFloatBuffer();
-							vertexBuffer.put(screenCoorToGLCoor(transformedRect.get(0), height, width, orientation));
-							vertexBuffer.put(screenCoorToGLCoor(transformedRect.get(1), height, width, orientation));
-							vertexBuffer.put(screenCoorToGLCoor(transformedRect.get(3), height, width, orientation));
-							vertexBuffer.put(screenCoorToGLCoor(transformedRect.get(2), height, width, orientation));
-							vertexBuffer.position(0);
-
-							mTextureMatrix.addSquareCoords(vertexBuffer);
-
-							transformedRect.clear();
-							float[] rightEyeLeftCorner = new float[] {faces[c].points[LandmarkConstants.MG_RIGHT_EYE_LEFT_CORNER].x, faces[c].points[LandmarkConstants.MG_RIGHT_EYE_LEFT_CORNER].y};
-							float[] rightEyeRightCorner = new float[] {faces[c].points[LandmarkConstants.MG_RIGHT_EYE_RIGHT_CORNER].x, faces[c].points[LandmarkConstants.MG_RIGHT_EYE_RIGHT_CORNER].y};
-
-							eyeWidth = distance(rightEyeLeftCorner[0], rightEyeLeftCorner[1], rightEyeRightCorner[0], rightEyeRightCorner[1]);
-							halfEyeHeight = eyeWidth / 2;
-
-							if (rollToLeft) {
-								aPoint = new PointF((float) (rightEyeLeftCorner[0] + halfEyeHeight * Math.sin(rad)), (float) (rightEyeLeftCorner[1] + halfEyeHeight * Math.cos(rad)));
-								dPoint = new PointF((float) (rightEyeLeftCorner[0] - halfEyeHeight * Math.sin(rad)), (float) (rightEyeLeftCorner[1] - halfEyeHeight * Math.cos(rad)));
-								cPoint = new PointF((float) (rightEyeRightCorner[0] - halfEyeHeight * Math.sin(rad)), (float) (rightEyeRightCorner[1] - halfEyeHeight * Math.cos(rad)));
-								bPoint = new PointF((float) (rightEyeRightCorner[0] + halfEyeHeight * Math.sin(rad)), (float) (rightEyeRightCorner[1] + halfEyeHeight * Math.cos(rad)));
-							} else {
-								aPoint = new PointF((float) (rightEyeLeftCorner[0] - halfEyeHeight * Math.sin(rad)), (float) (rightEyeLeftCorner[1] + halfEyeHeight * Math.cos(rad)));
-								dPoint = new PointF((float) (rightEyeLeftCorner[0] + halfEyeHeight * Math.sin(rad)), (float) (rightEyeLeftCorner[1] - halfEyeHeight * Math.cos(rad)));
-								cPoint = new PointF((float) (rightEyeRightCorner[0] + halfEyeHeight * Math.sin(rad)), (float) (rightEyeRightCorner[1] - halfEyeHeight * Math.cos(rad)));
-								bPoint = new PointF((float) (rightEyeRightCorner[0] - halfEyeHeight * Math.sin(rad)), (float) (rightEyeRightCorner[1] + halfEyeHeight * Math.cos(rad)));
-							}
-
-							transformedRect.add(aPoint);
-							transformedRect.add(bPoint);
-							transformedRect.add(cPoint);
-							transformedRect.add(dPoint);
-
-							bb = ByteBuffer.allocateDirect(transformedRect.size() * 3 * 4);
-							bb.order(ByteOrder.nativeOrder());
-							vertexBuffer = bb.asFloatBuffer();
-							vertexBuffer.put(screenCoorToGLCoor(transformedRect.get(0), height, width, orientation));
-							vertexBuffer.put(screenCoorToGLCoor(transformedRect.get(1), height, width, orientation));
-							vertexBuffer.put(screenCoorToGLCoor(transformedRect.get(3), height, width, orientation));
-							vertexBuffer.put(screenCoorToGLCoor(transformedRect.get(2), height, width, orientation));
-							vertexBuffer.position(0);
-
-							mTextureMatrix.addSquareCoords(vertexBuffer);
-
-							// determine mouthOpened
-							int mouthLeftCorner = (int) faces[c].points[LandmarkConstants.MG_MOUTH_LEFT_CORNER].x;
-							int mouthRightCorner = (int) faces[c].points[LandmarkConstants.MG_MOUTH_RIGHT_CORNER].x;
-							boolean mouthOpened = false;
-
-							int mouthOpenedSize = mouthRightCorner - mouthLeftCorner;
-							if (mouthOpenedSize < mouthNotOpenedSize) {
-								mouthNotOpenedSize = (int) ((float) mouthOpenedSize * 1.05);
-								mouthOpened = false;
-							} else {
-								mouthOpened = true;
-							}
-
-//							if (mouthOpened) {
-//								mTextureMatrix.setSquareCoords(vertexBuffer);
-//							} else {
-//								mTextureMatrix.setSquareCoords(null);
-//							}
 							pointsOpengl.add(triangleVBList);
 						}
 					} else {
+						Log.d(TAG, "run: faces size = 0");
 						pitch = 0.0f;
 						yaw = 0.0f;
 						roll = 0.0f;
@@ -480,6 +373,50 @@ public class OpenglActivity extends Activity
 				}
 			}
 		});
+	}
+
+	private FloatBuffer calculateEyeRect(PointF[] landmarks, float angle, boolean rollToLeft, int height, int width, int orientation, boolean leftEye) {
+		int leftCornerIndex = LandmarkConstants.MG_LEFT_EYE_LEFT_CORNER;
+		int rightCornerIndex = LandmarkConstants.MG_LEFT_EYE_RIGHT_CORNER;
+
+		if (!leftEye) {
+			leftCornerIndex = LandmarkConstants.MG_RIGHT_EYE_LEFT_CORNER;
+			rightCornerIndex = LandmarkConstants.MG_RIGHT_EYE_RIGHT_CORNER;
+		}
+
+		float[] eyeLeftCorner = new float[] {landmarks[leftCornerIndex].x, landmarks[leftCornerIndex].y};
+		float[] eyeRightCorner = new float[] {landmarks[rightCornerIndex].x, landmarks[rightCornerIndex].y};
+
+		float eyeWidth = distance(eyeLeftCorner[0], eyeLeftCorner[1], eyeRightCorner[0], eyeRightCorner[1]);
+		float halfEyeHeight = eyeWidth / 2;
+
+		PointF aPoint; // left_bottom
+		PointF bPoint; // right_bottom
+		PointF cPoint; // right_top
+		PointF dPoint; // left_top
+
+		if (!rollToLeft) {
+			aPoint = new PointF((float) (eyeLeftCorner[0] + halfEyeHeight * Math.sin(angle)), (float) (eyeLeftCorner[1] + halfEyeHeight * Math.cos(angle)));
+			dPoint = new PointF((float) (eyeLeftCorner[0] - halfEyeHeight * Math.sin(angle)), (float) (eyeLeftCorner[1] - halfEyeHeight * Math.cos(angle)));
+			cPoint = new PointF((float) (eyeRightCorner[0] - halfEyeHeight * Math.sin(angle)), (float) (eyeRightCorner[1] - halfEyeHeight * Math.cos(angle)));
+			bPoint = new PointF((float) (eyeRightCorner[0] + halfEyeHeight * Math.sin(angle)), (float) (eyeRightCorner[1] + halfEyeHeight * Math.cos(angle)));
+		} else {
+			aPoint = new PointF((float) (eyeLeftCorner[0] - halfEyeHeight * Math.sin(angle)), (float) (eyeLeftCorner[1] + halfEyeHeight * Math.cos(angle)));
+			dPoint = new PointF((float) (eyeLeftCorner[0] + halfEyeHeight * Math.sin(angle)), (float) (eyeLeftCorner[1] - halfEyeHeight * Math.cos(angle)));
+			cPoint = new PointF((float) (eyeRightCorner[0] + halfEyeHeight * Math.sin(angle)), (float) (eyeRightCorner[1] - halfEyeHeight * Math.cos(angle)));
+			bPoint = new PointF((float) (eyeRightCorner[0] - halfEyeHeight * Math.sin(angle)), (float) (eyeRightCorner[1] + halfEyeHeight * Math.cos(angle)));
+		}
+
+		ByteBuffer bb = ByteBuffer.allocateDirect(4 * 3 * 4);
+		bb.order(ByteOrder.nativeOrder());
+		FloatBuffer vertexBuffer = bb.asFloatBuffer();
+		vertexBuffer.put(screenCoorToGLCoor(aPoint, height, width, orientation));
+		vertexBuffer.put(screenCoorToGLCoor(bPoint, height, width, orientation));
+		vertexBuffer.put(screenCoorToGLCoor(dPoint, height, width, orientation));
+		vertexBuffer.put(screenCoorToGLCoor(cPoint, height, width, orientation));
+		vertexBuffer.position(0);
+
+		return vertexBuffer;
 	}
 
 	private float[] screenCoorToGLCoor(PointF point, int height, int width, int orientation) {

@@ -81,7 +81,7 @@ public class TextureMatrix {
 
     public void draw(float[] mvpMatrix) {
 
-        if (vertexBufferList.size() <= 0) {
+        if (vertexBufferList == null || vertexBufferList.size() <= 0) {
             return;
         }
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
@@ -111,15 +111,19 @@ public class TextureMatrix {
         GLES20.glDisableVertexAttribArray(texCoordHandle);
     }
 
-    public void addSquareCoords(FloatBuffer vertexBuffer) {
-//        this.vertexBuffer = ByteBuffer.allocateDirect(COORD1.length * 4)
-//                .order(ByteOrder.nativeOrder())
-//                .asFloatBuffer();
-//        this.vertexBuffer.put(COORD1).position(0);
-        vertexBufferList.add(vertexBuffer);
-    }
+//    public void addSquareCoords(FloatBuffer vertexBuffer) {
+////        this.vertexBuffer = ByteBuffer.allocateDirect(COORD1.length * 4)
+////                .order(ByteOrder.nativeOrder())
+////                .asFloatBuffer();
+////        this.vertexBuffer.put(COORD1).position(0);
+//        vertexBufferList.add(vertexBuffer);
+//    }
+//
+//    public void clearSquareCoords() {
+//        vertexBufferList.clear();
+//    }
 
-    public void clearSquareCoords() {
-        vertexBufferList.clear();
+    public void setSquaerCoords(List<FloatBuffer> vertexBuffers) {
+        vertexBufferList = vertexBuffers;
     }
 }
