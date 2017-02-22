@@ -278,6 +278,7 @@ public class OpenglActivity extends Activity
 				if (faces != null) {
 					long actionMaticsTime = System.currentTimeMillis();
 					ArrayList<ArrayList> pointsOpengl = new ArrayList<ArrayList>();
+					List<FloatBuffer> vertextBuffers = new ArrayList<>();
 					mPointsMatrix.vertexBuffers.clear();
 					confidence = 0.0f;
 
@@ -327,17 +328,14 @@ public class OpenglActivity extends Activity
 							roll = (float)(real_roll - Math.PI);
 							boolean rollToLeft = roll > 0;
 							float rad = (float) (Math.PI - Math.abs(roll));
-							
+
 							// calculate transformed rect for big eye
-							List<FloatBuffer> vertextBuffers = new ArrayList<>(2);
 							vertextBuffers.add(calculateEyeRect(faces[c].points, rad, rollToLeft, height, width, orientation, true));
 							vertextBuffers.add(calculateEyeRect(faces[c].points, rad, rollToLeft, height, width, orientation, false));
-							mTextureMatrix.setSquaerCoords(vertextBuffers);
 
 							pointsOpengl.add(triangleVBList);
 						}
 					} else {
-						Log.d(TAG, "run: faces size = 0");
 						pitch = 0.0f;
 						yaw = 0.0f;
 						roll = 0.0f;
@@ -348,6 +346,7 @@ public class OpenglActivity extends Activity
 					else
 						mPointsMatrix.bottomVertexBuffer = null;
 					synchronized (mPointsMatrix) {
+						mTextureMatrix.setSquaerCoords(vertextBuffers);
 						mPointsMatrix.points = pointsOpengl;
 					}
 
