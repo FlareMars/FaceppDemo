@@ -3,6 +3,7 @@ package com.facepp.library;
 import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
@@ -35,6 +36,7 @@ import com.facepp.library.util.Screen;
 import com.facepp.library.util.SensorEventUtil;
 import com.facepp.library.util.TextureMatrix;
 import com.megvii.facepp.sdk.Facepp;
+import com.megvii.facepp.sdk.jni.NativeFaceppAPI;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -197,6 +199,10 @@ public class OpenglActivity extends Activity
 				bottom = height - top;
 			}
 
+			long [] algorithmInfo = NativeFaceppAPI.nativeGetAlgorithmInfo(ConUtil.getFileContent(this, R.raw.megviifacepp_0_4_1_model));
+			long ability = algorithmInfo[2];
+			Log.d(TAG, "onResume: ability = " + ability);
+
 			String errorCode = facepp.init(this, ConUtil.getFileContent(this, R.raw.megviifacepp_0_4_1_model));
 			Facepp.FaceppConfig faceppConfig = facepp.getFaceppConfig();
 			faceppConfig.interval = detection_interval;
@@ -239,6 +245,7 @@ public class OpenglActivity extends Activity
 	long time_AgeGender_end = 0;
 	String AttriButeStr = "";
 	int rotation = Angle;
+	private int mouthNotOpenedSize = Integer.MAX_VALUE;
 
 	@Override
 	public void onPreviewFrame(final byte[] imgData, final Camera camera) {
@@ -272,6 +279,7 @@ public class OpenglActivity extends Activity
 					long actionMaticsTime = System.currentTimeMillis();
 					ArrayList<ArrayList> pointsOpengl = new ArrayList<ArrayList>();
 					mPointsMatrix.vertexBuffers.clear();
+					mTextureMatrix.clearSquareCoords();
 					confidence = 0.0f;
 
 					if (faces.length >= 0) {
@@ -314,29 +322,57 @@ public class OpenglActivity extends Activity
 								triangleVBList.add(fb);
 							}
 
-							// calculate transformed rect
 							double real_roll = roll + Math.PI + (rotation / 180.0f) * Math.PI;
 							while (real_roll > 2 * Math.PI)
 								real_roll -= 2 * Math.PI;
 							roll = (float)(real_roll - Math.PI);
 							boolean rollToLeft = roll > 0;
 							float rad = (float) (Math.PI - Math.abs(roll));
-
 							List<PointF> transformedRect = new ArrayList<>(4);
-							float[] leftEyeTopP = new float[] {faces[c].points[LandmarkConstants.MG_LEFT_EYE_TOP].x, faces[c].points[LandmarkConstants.MG_LEFT_EYE_TOP].y};
-							float[] rightEyeTopP = new float[] {faces[c].points[LandmarkConstants.MG_RIGHT_EYE_TOP].x, faces[c].points[LandmarkConstants.MG_RIGHT_EYE_TOP].y};
 
-							float h = 30.0f;
+							PointF aPoint;
+							PointF bPoint;
+							PointF cPoint;
+							PointF dPoint;
 
-							PointF aPoint = new PointF(leftEyeTopP[0], leftEyeTopP[1]);
-							PointF bPoint = new PointF(rightEyeTopP[0], rightEyeTopP[1]);
-							PointF dPoint = new PointF(0.0f, (float) (aPoint.y - h * Math.cos(rad)));
-							if (!rollToLeft) {
-								dPoint.x = (float) (aPoint.x - h * Math.sin(rad));
+							// calculate transformed rect for simple icon
+							float[] leftEyeTopP = new float[]{faces[c].points[LandmarkConstants.MG_LEFT_EYE_TOP].x, faces[c].points[LandmarkConstants.MG_LEFT_EYE_TOP].y};
+							float[] rightEyeTopP = new float[]{faces[c].points[LandmarkConstants.MG_RIGHT_EYE_TOP].x, faces[c].points[LandmarkConstants.MG_RIGHT_EYE_TOP].y};
+
+							float w = distance(leftEyeTopP[0], leftEyeTopP[1], rightEyeTopP[0], rightEyeTopP[1]);
+							float h = w;
+
+//							PointF aPoint = new PointF(leftEyeTopP[0], leftEyeTopP[1]);
+//							PointF bPoint = new PointF(rightEyeTopP[0], rightEyeTopP[1]);
+//							PointF dPoint = new PointF(0.0f, (float) (aPoint.y - h * Math.cos(rad)));
+//							if (!rollToLeft) {
+//								dPoint.x = (float) (aPoint.x - h * Math.sin(rad));
+//							} else {
+//								dPoint.x = (float) (aPoint.x + h * Math.sin(rad));
+//							}
+//							PointF cPoint = new PointF(bPoint.x - aPoint.x + dPoint.x, bPoint.y - aPoint.y + dPoint.y);
+
+
+
+							// calculate transformed rect for big eye
+							float[] leftEyeLeftCorner = new float[] {faces[c].points[LandmarkConstants.MG_LEFT_EYE_LEFT_CORNER].x, faces[c].points[LandmarkConstants.MG_LEFT_EYE_LEFT_CORNER].y};
+							float[] leftEyeRightCorner = new float[] {faces[c].points[LandmarkConstants.MG_LEFT_EYE_RIGHT_CORNER].x, faces[c].points[LandmarkConstants.MG_LEFT_EYE_RIGHT_CORNER].y};
+
+							float eyeWidth = distance(leftEyeLeftCorner[0], leftEyeLeftCorner[1], leftEyeRightCorner[0], leftEyeRightCorner[1]);
+							float halfEyeHeight = eyeWidth / 2;
+
+							if (rollToLeft) {
+								aPoint = new PointF((float) (leftEyeLeftCorner[0] + halfEyeHeight * Math.sin(rad)), (float) (leftEyeLeftCorner[1] + halfEyeHeight * Math.cos(rad)));
+								dPoint = new PointF((float) (leftEyeLeftCorner[0] - halfEyeHeight * Math.sin(rad)), (float) (leftEyeLeftCorner[1] - halfEyeHeight * Math.cos(rad)));
+								cPoint = new PointF((float) (leftEyeRightCorner[0] - halfEyeHeight * Math.sin(rad)), (float) (leftEyeRightCorner[1] - halfEyeHeight * Math.cos(rad)));
+								bPoint = new PointF((float) (leftEyeRightCorner[0] + halfEyeHeight * Math.sin(rad)), (float) (leftEyeRightCorner[1] + halfEyeHeight * Math.cos(rad)));
 							} else {
-								dPoint.x = (float) (aPoint.x + h * Math.sin(rad));
+								aPoint = new PointF((float) (leftEyeLeftCorner[0] - halfEyeHeight * Math.sin(rad)), (float) (leftEyeLeftCorner[1] + halfEyeHeight * Math.cos(rad)));
+								dPoint = new PointF((float) (leftEyeLeftCorner[0] + halfEyeHeight * Math.sin(rad)), (float) (leftEyeLeftCorner[1] - halfEyeHeight * Math.cos(rad)));
+								cPoint = new PointF((float) (leftEyeRightCorner[0] + halfEyeHeight * Math.sin(rad)), (float) (leftEyeRightCorner[1] - halfEyeHeight * Math.cos(rad)));
+								bPoint = new PointF((float) (leftEyeRightCorner[0] - halfEyeHeight * Math.sin(rad)), (float) (leftEyeRightCorner[1] + halfEyeHeight * Math.cos(rad)));
 							}
-							PointF cPoint = new PointF(bPoint.x - aPoint.x + dPoint.x, bPoint.y - aPoint.y + dPoint.y);
+
 							transformedRect.add(aPoint);
 							transformedRect.add(bPoint);
 							transformedRect.add(cPoint);
@@ -345,17 +381,67 @@ public class OpenglActivity extends Activity
 							ByteBuffer bb = ByteBuffer.allocateDirect(transformedRect.size() * 3 * 4);
 							bb.order(ByteOrder.nativeOrder());
 							FloatBuffer vertexBuffer = bb.asFloatBuffer();
-//							for (int i = 0, size = transformedRect.size();i < size;i++) {
-//								vertexBuffer.put(screenCoorToGLCoor(transformedRect.get(i), height, width, orientation));
-//							}
 							vertexBuffer.put(screenCoorToGLCoor(transformedRect.get(0), height, width, orientation));
 							vertexBuffer.put(screenCoorToGLCoor(transformedRect.get(1), height, width, orientation));
 							vertexBuffer.put(screenCoorToGLCoor(transformedRect.get(3), height, width, orientation));
 							vertexBuffer.put(screenCoorToGLCoor(transformedRect.get(2), height, width, orientation));
 							vertexBuffer.position(0);
 
-//							mPointsMatrix.vertexBuffers.add(vertexBuffer);
-							mTextureMatrix.setSquareCoords(vertexBuffer);
+							mTextureMatrix.addSquareCoords(vertexBuffer);
+
+							transformedRect.clear();
+							float[] rightEyeLeftCorner = new float[] {faces[c].points[LandmarkConstants.MG_RIGHT_EYE_LEFT_CORNER].x, faces[c].points[LandmarkConstants.MG_RIGHT_EYE_LEFT_CORNER].y};
+							float[] rightEyeRightCorner = new float[] {faces[c].points[LandmarkConstants.MG_RIGHT_EYE_RIGHT_CORNER].x, faces[c].points[LandmarkConstants.MG_RIGHT_EYE_RIGHT_CORNER].y};
+
+							eyeWidth = distance(rightEyeLeftCorner[0], rightEyeLeftCorner[1], rightEyeRightCorner[0], rightEyeRightCorner[1]);
+							halfEyeHeight = eyeWidth / 2;
+
+							if (rollToLeft) {
+								aPoint = new PointF((float) (rightEyeLeftCorner[0] + halfEyeHeight * Math.sin(rad)), (float) (rightEyeLeftCorner[1] + halfEyeHeight * Math.cos(rad)));
+								dPoint = new PointF((float) (rightEyeLeftCorner[0] - halfEyeHeight * Math.sin(rad)), (float) (rightEyeLeftCorner[1] - halfEyeHeight * Math.cos(rad)));
+								cPoint = new PointF((float) (rightEyeRightCorner[0] - halfEyeHeight * Math.sin(rad)), (float) (rightEyeRightCorner[1] - halfEyeHeight * Math.cos(rad)));
+								bPoint = new PointF((float) (rightEyeRightCorner[0] + halfEyeHeight * Math.sin(rad)), (float) (rightEyeRightCorner[1] + halfEyeHeight * Math.cos(rad)));
+							} else {
+								aPoint = new PointF((float) (rightEyeLeftCorner[0] - halfEyeHeight * Math.sin(rad)), (float) (rightEyeLeftCorner[1] + halfEyeHeight * Math.cos(rad)));
+								dPoint = new PointF((float) (rightEyeLeftCorner[0] + halfEyeHeight * Math.sin(rad)), (float) (rightEyeLeftCorner[1] - halfEyeHeight * Math.cos(rad)));
+								cPoint = new PointF((float) (rightEyeRightCorner[0] + halfEyeHeight * Math.sin(rad)), (float) (rightEyeRightCorner[1] - halfEyeHeight * Math.cos(rad)));
+								bPoint = new PointF((float) (rightEyeRightCorner[0] - halfEyeHeight * Math.sin(rad)), (float) (rightEyeRightCorner[1] + halfEyeHeight * Math.cos(rad)));
+							}
+
+							transformedRect.add(aPoint);
+							transformedRect.add(bPoint);
+							transformedRect.add(cPoint);
+							transformedRect.add(dPoint);
+
+							bb = ByteBuffer.allocateDirect(transformedRect.size() * 3 * 4);
+							bb.order(ByteOrder.nativeOrder());
+							vertexBuffer = bb.asFloatBuffer();
+							vertexBuffer.put(screenCoorToGLCoor(transformedRect.get(0), height, width, orientation));
+							vertexBuffer.put(screenCoorToGLCoor(transformedRect.get(1), height, width, orientation));
+							vertexBuffer.put(screenCoorToGLCoor(transformedRect.get(3), height, width, orientation));
+							vertexBuffer.put(screenCoorToGLCoor(transformedRect.get(2), height, width, orientation));
+							vertexBuffer.position(0);
+
+							mTextureMatrix.addSquareCoords(vertexBuffer);
+
+							// determine mouthOpened
+							int mouthLeftCorner = (int) faces[c].points[LandmarkConstants.MG_MOUTH_LEFT_CORNER].x;
+							int mouthRightCorner = (int) faces[c].points[LandmarkConstants.MG_MOUTH_RIGHT_CORNER].x;
+							boolean mouthOpened = false;
+
+							int mouthOpenedSize = mouthRightCorner - mouthLeftCorner;
+							if (mouthOpenedSize < mouthNotOpenedSize) {
+								mouthNotOpenedSize = (int) ((float) mouthOpenedSize * 1.05);
+								mouthOpened = false;
+							} else {
+								mouthOpened = true;
+							}
+
+//							if (mouthOpened) {
+//								mTextureMatrix.setSquareCoords(vertexBuffer);
+//							} else {
+//								mTextureMatrix.setSquareCoords(null);
+//							}
 							pointsOpengl.add(triangleVBList);
 						}
 					} else {
@@ -459,7 +545,7 @@ public class OpenglActivity extends Activity
 		GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 		mTextureID = OpenGLHelper.createTextureID();
-		Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.icon);
+		Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.big_eye);
 		imgHeight = bitmap.getHeight();
 		imgWidth = bitmap.getWidth();
 		mTexture2DID = OpenGLHelper.createTexture2DID(bitmap);

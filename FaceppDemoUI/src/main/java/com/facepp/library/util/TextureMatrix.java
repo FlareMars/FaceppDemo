@@ -5,6 +5,8 @@ import android.util.Log;
 
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 import static android.content.ContentValues.TAG;
 
@@ -36,7 +38,9 @@ public class TextureMatrix {
             "     gl_FragColor = texture2D(inputImageTexture, textureCoordinate);\n" +
             "}";
 
-    private FloatBuffer vertexBuffer, textureVerticesBuffer;
+
+    private List<FloatBuffer> vertexBufferList = new ArrayList<>(2);
+    private FloatBuffer textureVerticesBuffer;
     private ShortBuffer drawListBuffer;
     private int textureID = 0;
 
@@ -77,41 +81,45 @@ public class TextureMatrix {
 
     public void draw(float[] mvpMatrix) {
 
-        if (vertexBuffer == null) {
-            Log.d(TAG, "draw: vertexBuffer == null");
+        if (vertexBufferList.size() <= 0) {
             return;
         }
-
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        GLES20.glEnable(GLES20.GL_BLEND);
         GLES20.glUseProgram(programId);
-//        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
-
         GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0);
 
-        GLES20.glEnableVertexAttribArray(positionHandle);
-        GLES20.glVertexAttribPointer(positionHandle, COORDS_PER_VERTEX,
-                GLES20.GL_FLOAT, false, vertexStride, vertexBuffer);
-        vertexBuffer.position(0);
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureID);
+        GLES20.glUniform1i(textureHandle, 0);
 
         GLES20.glEnableVertexAttribArray(texCoordHandle);
         GLES20.glVertexAttribPointer(texCoordHandle, COORDS_PER_VERTEX,
                 GLES20.GL_FLOAT, false, texVertextStride, textureVerticesBuffer);
         textureVerticesBuffer.position(0);
 
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureID);
-        GLES20.glUniform1i(textureHandle, 0);
+        GLES20.glEnableVertexAttribArray(positionHandle);
 
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
+        for (FloatBuffer fb : vertexBufferList) {
+            GLES20.glVertexAttribPointer(positionHandle, COORDS_PER_VERTEX,
+                    GLES20.GL_FLOAT, false, vertexStride, fb);
+            fb.position(0);
+            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
+        }
 
         GLES20.glDisableVertexAttribArray(positionHandle);
         GLES20.glDisableVertexAttribArray(texCoordHandle);
     }
 
-    public void setSquareCoords(FloatBuffer vertexBuffer) {
+    public void addSquareCoords(FloatBuffer vertexBuffer) {
 //        this.vertexBuffer = ByteBuffer.allocateDirect(COORD1.length * 4)
 //                .order(ByteOrder.nativeOrder())
 //                .asFloatBuffer();
 //        this.vertexBuffer.put(COORD1).position(0);
-        this.vertexBuffer  = vertexBuffer;
+        vertexBufferList.add(vertexBuffer);
+    }
+
+    public void clearSquareCoords() {
+        vertexBufferList.clear();
     }
 }
