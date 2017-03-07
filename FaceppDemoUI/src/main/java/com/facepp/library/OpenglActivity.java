@@ -199,11 +199,11 @@ public class OpenglActivity extends Activity
 				bottom = height - top;
 			}
 
-			long [] algorithmInfo = NativeFaceppAPI.nativeGetAlgorithmInfo(ConUtil.getFileContent(this, R.raw.megviifacepp_0_4_1_model));
+			long [] algorithmInfo = NativeFaceppAPI.nativeGetAlgorithmInfo(ConUtil.getFileContent(this, R.raw.megviifacepp_0_4_5_model));
 			long ability = algorithmInfo[2];
 			Log.d(TAG, "onResume: ability = " + ability);
 
-			String errorCode = facepp.init(this, ConUtil.getFileContent(this, R.raw.megviifacepp_0_4_1_model));
+			String errorCode = facepp.init(this, ConUtil.getFileContent(this, R.raw.megviifacepp_0_4_5_model));
 			Facepp.FaceppConfig faceppConfig = facepp.getFaceppConfig();
 			faceppConfig.interval = detection_interval;
 			faceppConfig.minFaceSize = min_face_size;

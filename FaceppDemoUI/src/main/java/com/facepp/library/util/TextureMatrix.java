@@ -1,14 +1,11 @@
 package com.facepp.library.util;
 
 import android.opengl.GLES20;
-import android.util.Log;
 
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.List;
-
-import static android.content.ContentValues.TAG;
 
 /**
  * Created by root on 17-2-22.
@@ -94,7 +91,7 @@ public class TextureMatrix {
         GLES20.glUniform1i(textureHandle, 0);
 
         GLES20.glEnableVertexAttribArray(texCoordHandle);
-        GLES20.glVertexAttribPointer(texCoordHandle, COORDS_PER_VERTEX,
+        GLES20.glVertexAttribPointer(texCoordHandle, 2,
                 GLES20.GL_FLOAT, false, texVertextStride, textureVerticesBuffer);
         textureVerticesBuffer.position(0);
 
